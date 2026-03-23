@@ -1,0 +1,35 @@
+/* Module Custom Styles */
+
+/* Mobile: Show 2 items — slide one image at a time  height: 300px; */
+@media (max-width: 991px) {
+    .carousel-inner .active.carousel-item-start { transform: translateX(-50%); }
+    .carousel-inner .carousel-item-next.carousel-item-start { transform: translateX(50%); }
+    .carousel-inner .active.carousel-item-end { transform: translateX(50%); }
+    .carousel-inner .carousel-item-prev.carousel-item-end { transform: translateX(-50%); }
+}
+
+.carousel-inner .carousel-item.active,
+.carousel-inner .carousel-item-next,
+.carousel-inner .carousel-item-prev {
+    display: flex;
+}
+
+.carousel-inner .carousel-item {
+    transition: transform 0.45s ease-in-out;
+    will-change: transform;
+}
+
+.carousel-item .col-6 {
+    padding-left: 8px;
+    padding-right: 8px;
+}
+
+.carousel-item img {
+    width: 100%;
+    
+    object-fit: cover;
+    padding: 0;
+    border-radius: 12px;
+    backface-visibility: hidden;
+    transform: translateZ(0);
+}

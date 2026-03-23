@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/_Oqtane/">
+    <Project Path="../oqtane.framework/Oqtane.Client/Oqtane.Client.csproj" />
+    <Project Path="../oqtane.framework/Oqtane.Shared/Oqtane.Shared.csproj" />
+    <Project Path="..\oqtane.framework\Oqtane.Server\Oqtane.Server.csproj">
+      <Build Solution="Debug|*" Project="false" />
+    </Project>
+  </Folder>
+  <Project Path="Client\GIBS.Module.Carousel.Client.csproj" />
+  <Project Path="Package\GIBS.Module.Carousel.Package.csproj" />
+  <Project Path="Server\GIBS.Module.Carousel.Server.csproj" />
+  <Project Path="Shared\GIBS.Module.Carousel.Shared.csproj" />
+</Solution>

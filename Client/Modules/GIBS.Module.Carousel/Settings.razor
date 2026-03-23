@@ -1,0 +1,98 @@
+@namespace GIBS.Module.Carousel
+@inherits ModuleBase
+@inject ISettingService SettingService
+@implements Oqtane.Interfaces.ISettingsControl
+@inject IStringLocalizer<Settings> Localizer
+@inject IFolderService FolderService
+
+
+<div class="container">
+    <div class="row mb-1 align-items-center">
+        <Label Class="col-sm-3" For="numberVisible" HelpText="Enter a value for NumberVisible" ResourceKey="NumberVisible" ResourceType="@resourceType">Number Visible: </Label>
+            <div class="col-sm-9">
+            <input id="numberVisible" type="text" class="form-control" @bind="@_numberVisible" />
+            </div>
+    </div>
+    <div class="row mb-1 align-items-center">
+        <Label Class="col-sm-3" For="imageHeight" HelpText="Enter a value for ImageHeight" ResourceKey="ImageHeight" ResourceType="@resourceType">Image Height: </Label>
+        <div class="col-sm-9">
+            <input id="imageHeight" type="text" class="form-control" @bind="@_imageHeight" />
+        </div>
+    </div>
+    <div class="row mb-1 align-items-center">
+        <Label Class="col-sm-3" For="folderList" HelpText="Select the image folder" ResourceKey="ImageFolder" ResourceType="@resourceType">Image Folder: </Label>
+        <div class="col-sm-9">
+            <select id="folderList" class="form-select" @bind="@_imageFolder">
+                @foreach (Folder folder in _folders)
+                {
+                    <option value="@(folder.FolderId)">@(new string('-', folder.Level * 2))@(folder.Name)</option>
+                }
+            </select>
+        </div>
+    </div>
+
+    <div class="row mb-1 align-items-center">
+        <Label Class="col-sm-3" For="imageMaxWidth" HelpText="The maximum width for uploaded images (in pixels). The image will be resized if it exceeds this value." ResourceKey="ImageMaxWidth">Max Image Width: </Label>
+        <div class="col-sm-9">
+            <input id="imageMaxWidth" type="number" class="form-control" @bind="@_imageMaxWidth" />
+        </div>
+    </div>
+    <div class="row mb-1 align-items-center">
+        <Label Class="col-sm-3" For="imageMaxHeight" HelpText="The maximum height for uploaded images (in pixels). The image will be resized if it exceeds this value." ResourceKey="ImageMaxHeight">Max Image Height: </Label>
+        <div class="col-sm-9">
+            <input id="imageMaxHeight" type="number" class="form-control" @bind="@_imageMaxHeight" />
+        </div>
+    </div>
+</div>
+
+@code {
+    private string resourceType = "GIBS.Module.Carousel.Settings, GIBS.Module.Carousel.Client.Oqtane"; // for localization
+    public override string Title => "Carousel Settings";
+
+    // string _value;
+    private List<Folder> _folders = new List<Folder>();
+    private string _numberVisible = "5";
+    private string _imageHeight;
+    private string _imageFolder;
+
+    private string _imageMaxWidth;
+    private string _imageMaxHeight;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _folders = await FolderService.GetFoldersAsync(PageState.Site.SiteId);
+            
+            Dictionary<string, string> settings = await SettingService.GetModuleSettingsAsync(ModuleState.ModuleId);
+           
+            _imageFolder = SettingService.GetSetting(settings, "ImageFolder", "0");
+            _imageMaxHeight = SettingService.GetSetting(settings, "ImageMaxHeight", "600");
+            _imageMaxWidth = SettingService.GetSetting(settings, "ImageMaxWidth", "800"); 
+            _numberVisible = SettingService.GetSetting(settings, "NumberVisible", "5");
+        }
+        catch (Exception ex)
+        {
+            AddModuleMessage(ex.Message, MessageType.Error);
+        }
+    }
+
+    public async Task UpdateSettings()
+    {
+        try
+        {
+            var settings = await SettingService.GetModuleSettingsAsync(ModuleState.ModuleId);
+            
+            settings = SettingService.SetSetting(settings, "ImageFolder", _imageFolder);
+            settings = SettingService.SetSetting(settings, "ImageMaxWidth", _imageMaxWidth);
+            settings = SettingService.SetSetting(settings, "ImageMaxHeight", _imageMaxHeight);
+            settings = SettingService.SetSetting(settings, "NumberVisible", _numberVisible);
+
+            await SettingService.UpdateModuleSettingsAsync(settings, ModuleState.ModuleId);
+        }
+        catch (Exception ex)
+        {
+            AddModuleMessage(ex.Message, MessageType.Error);
+        }
+    }
+}
