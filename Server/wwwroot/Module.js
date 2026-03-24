@@ -68,6 +68,15 @@ GIBS.Carousel = {
         var style = document.createElement('style');
         style.id = styleId;
         style.textContent =
+            '/* Mobile - 1 item */\n' +
+            scope + ' .carousel-item .col-6 { flex: 0 0 auto; width: 100%; max-width: 100%; }\n' +
+            '\n' +
+            '/* Tablet - 2 items */\n' +
+            '@media (min-width: 576px) {\n' +
+            '  ' + scope + ' .carousel-item .col-6 { width: 50%; max-width: 50%; }\n' +
+            '}\n' +
+            '\n' +
+            '/* Desktop - configured items */\n' +
             '@media (min-width: 992px) {\n' +
             '  ' + scope + ' .carousel-item .col-6 { flex: 0 0 auto; width: ' + pct + '%; max-width: ' + pct + '%; }\n' +
             '  ' + scope + ' .carousel-inner .carousel-item-end.active,\n' +
@@ -84,12 +93,37 @@ GIBS.Carousel = {
         document.querySelectorAll('.carousel[data-min-per-slide]').forEach(function (carousel) {
             GIBS.Carousel.initMultiItem(carousel);
         });
+    },
+
+    observeDOM: function () {
+        var observer = new MutationObserver(function (mutations) {
+            mutations.forEach(function (mutation) {
+                if (mutation.type === 'childList' || mutation.type === 'attributes') {
+                    var carousels = document.querySelectorAll('.carousel[data-min-per-slide]');
+                    carousels.forEach(function (carousel) {
+                        if (!carousel.hasAttribute('data-gibs-initialized')) {
+                            GIBS.Carousel.initMultiItem(carousel);
+                            carousel.setAttribute('data-gibs-initialized', 'true');
+                        }
+                    });
+                }
+            });
+        });
+
+        var config = {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeFilter: ['data-min-per-slide']
+        };
+        observer.observe(document.body, config);
     }
 };
 
 (function () {
     function init() {
         GIBS.Carousel.initAll();
+        GIBS.Carousel.observeDOM();
     }
 
     if (document.readyState === 'loading') {
@@ -97,6 +131,4 @@ GIBS.Carousel = {
     } else {
         init();
     }
-
-    window.addEventListener('pageshow', init, { once: true });
 })();

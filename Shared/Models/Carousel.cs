@@ -14,5 +14,6 @@ namespace GIBS.Module.Carousel.Models
         public string ImageUrl { get; set; }
         public string Description { get; set; }
         public bool IsActive { get; set; } = true;
+        public int OrderBy { get; set; } = 1;
     }
 }

@@ -8,13 +8,11 @@
 @inject IStringLocalizer<Index> Localizer
 @inject ISettingService SettingService
 
-<div class="text-end">
-    <ActionLink Action="Add" Security="SecurityAccessLevel.Edit" Text="Manage Carousel" ResourceKey="ManageCarousel" />
-</div>
+
 
 @if (_Carousels == null)
 {
-    <p><em>Loading...</em></p>
+    <p><em>You need to upload some pictures...</em></p>
 }
 else if (_Carousels.Count > 0)
 {
@@ -24,7 +22,7 @@ else if (_Carousels.Count > 0)
             {
                 <div class="carousel-item @(i == 0 ? "active" : "")">
                     <div class="col-6">
-                        <img src="@_Carousels[i].ImageUrl" class="img-fluid" alt="@_Carousels[i].Title" style="height:@(_imageHeight)px;" loading="eager" decoding="async" />
+                        <img src="@_Carousels[i].ImageUrl" class="img-fluid" alt="@_Carousels[i].Title" style="height:@(_imageHeight)" loading="eager" decoding="async" />
                     </div>
                 </div>
             }
@@ -42,13 +40,17 @@ else
     <p>@Localizer["Message.DisplayNone"]</p>
 }
 
+<div class="text-end">
+    <ActionLink Action="Add" Security="SecurityAccessLevel.Edit" Text="Manage Carousel" ResourceKey="ManageCarousel" />
+</div>
+
 @code {
     public override string RenderMode => RenderModes.Static;
 
     public override List<Resource> Resources => new List<Resource>()
     {
-        new Stylesheet("_content/GIBS.Module.Carousel/Module.css?v=8"),
-        new Script("_content/GIBS.Module.Carousel/Module.js?v=7")
+        new Stylesheet("_content/GIBS.Module.Carousel/Module.css?v=9"),
+        new Script("_content/GIBS.Module.Carousel/Module.js?v=9")
     };
 
     List<Carousel> _Carousels;
@@ -62,7 +64,8 @@ else
             _numberPerSlide = SettingService.GetSetting(ModuleState.Settings, "NumberVisible", "5");
             _imageHeight = SettingService.GetSetting(ModuleState.Settings, "ImageHeight", "300");
 
-            _Carousels = await ClientCarouselService.GetCarouselsAsync(ModuleState.ModuleId);
+            var allCarousels = await ClientCarouselService.GetCarouselsAsync(ModuleState.ModuleId);
+            _Carousels = allCarousels.Where(c => c.IsActive).OrderBy(item => item.OrderBy).ToList();
         }
         catch (Exception ex)
         {

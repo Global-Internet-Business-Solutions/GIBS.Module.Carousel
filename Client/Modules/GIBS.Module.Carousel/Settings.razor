@@ -14,7 +14,7 @@
             </div>
     </div>
     <div class="row mb-1 align-items-center">
-        <Label Class="col-sm-3" For="imageHeight" HelpText="Enter a value for ImageHeight" ResourceKey="ImageHeight" ResourceType="@resourceType">Image Height: </Label>
+        <Label Class="col-sm-3" For="imageHeight" HelpText="Enter a value for ImageHeight: ie 300px" ResourceKey="ImageHeight" ResourceType="@resourceType">Image Height: </Label>
         <div class="col-sm-9">
             <input id="imageHeight" type="text" class="form-control" @bind="@_imageHeight" />
         </div>
@@ -63,13 +63,14 @@
         try
         {
             _folders = await FolderService.GetFoldersAsync(PageState.Site.SiteId);
-            
+
             Dictionary<string, string> settings = await SettingService.GetModuleSettingsAsync(ModuleState.ModuleId);
-           
+
             _imageFolder = SettingService.GetSetting(settings, "ImageFolder", "0");
             _imageMaxHeight = SettingService.GetSetting(settings, "ImageMaxHeight", "600");
             _imageMaxWidth = SettingService.GetSetting(settings, "ImageMaxWidth", "800"); 
             _numberVisible = SettingService.GetSetting(settings, "NumberVisible", "5");
+            _imageHeight = SettingService.GetSetting(settings, "ImageHeight", "300px");
         }
         catch (Exception ex)
         {
@@ -82,11 +83,12 @@
         try
         {
             var settings = await SettingService.GetModuleSettingsAsync(ModuleState.ModuleId);
-            
+
             settings = SettingService.SetSetting(settings, "ImageFolder", _imageFolder);
             settings = SettingService.SetSetting(settings, "ImageMaxWidth", _imageMaxWidth);
             settings = SettingService.SetSetting(settings, "ImageMaxHeight", _imageMaxHeight);
             settings = SettingService.SetSetting(settings, "NumberVisible", _numberVisible);
+            settings = SettingService.SetSetting(settings, "ImageHeight", _imageHeight);
 
             await SettingService.UpdateModuleSettingsAsync(settings, ModuleState.ModuleId);
         }

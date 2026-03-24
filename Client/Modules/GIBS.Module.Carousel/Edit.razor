@@ -2,6 +2,7 @@
 @using Oqtane.Modules.Controls
 @using GIBS.Module.Carousel.Services
 @using GIBS.Module.Carousel.Models
+@using System.IO
 
 @namespace GIBS.Module.Carousel
 @inherits ModuleBase
@@ -49,6 +50,12 @@
             </div>
         </div>
         <div class="row mb-1 align-items-center">
+            <Label Class="col-sm-3" For="orderBy" HelpText="Enter the order" ResourceKey="OrderBy">Order By: </Label>
+            <div class="col-sm-9">
+                <input id="orderBy" class="form-control" type="number" @bind="@_orderBy" />
+            </div>
+        </div>
+        <div class="row mb-1 align-items-center">
             <Label Class="col-sm-3" For="isActive" HelpText="Is the carousel active?" ResourceKey="IsActive">Is Active: </Label>
             <div class="col-sm-9">
                 <input id="isActive" type="checkbox" class="form-check-input" @bind="@_isActive" />
@@ -76,13 +83,17 @@
 }
 else if (_Carousels.Count != 0)
 {
-    <Pager Items="@_Carousels">
+    <Pager Items="@_Carousels.OrderBy(c => c.OrderBy).ToList()">
         <Header>
             <th style="width: 1px;">&nbsp;</th>
             <th style="width: 1px;">&nbsp;</th>
             <th>@Localizer["Title"]</th>
             <th>@Localizer["Description"]</th>
+            <th>@Localizer["ImageUrl"]</th>
             <th>@Localizer["Image"]</th>
+            <th class="texcenter">@Localizer["OrderBy"]</th>
+            <th style="width: 1px;">&nbsp;</th>
+            <th style="width: 1px;">&nbsp;</th>
             <th>@Localizer["IsActive"]</th>
         </Header>
         <Row>
@@ -94,7 +105,15 @@ else if (_Carousels.Count != 0)
             </td>
             <td>@context.Title</td>
             <td>@context.Description</td>
-            <td><img src="@context.ImageUrl" alt="Image preview" style="max-width: 280px; max-height: 200px;" /></td>
+            <td>@context.ImageUrl</td>
+            <td><img src="@context.ImageUrl" alt="Image preview" style="max-width: 220px; max-height: 180px;" /></td>
+            <td>@context.OrderBy</td>
+            <td>
+                <button type="button" class="btn btn-outline-primary" title="Move Up" @onclick="@(async () => await MoveUp(context))" disabled="@(context.OrderBy == _Carousels.Min(c => c.OrderBy))"><i class="oi oi-arrow-circle-top"></i></button>
+            </td>
+            <td>
+                <button type="button" class="btn btn-outline-primary" title="Move Down" @onclick="@(async () => await MoveDown(context))" disabled="@(context.OrderBy == _Carousels.Max(c => c.OrderBy))"><i class="oi oi-arrow-circle-bottom"></i></button>
+            </td>
             <td>@context.IsActive</td>
         </Row>
     </Pager>
@@ -109,7 +128,7 @@ else
 
     public override string Actions => "Add,Edit";
 
-    public override string Title => "Manage Carousel";
+    public override string Title => "Manage Carousel Photos";
 
     public override List<Resource> Resources => new List<Resource>()
     {
@@ -123,8 +142,9 @@ else
     private string _title;
     private string _imageUrl;
     private string _description;
-        private bool _isActive = true;
+    private bool _isActive = true;
     private string _createdby;
+    private int _orderBy;
     private DateTime _createdon;
     private string _modifiedby;
     private DateTime _modifiedon;
@@ -166,7 +186,13 @@ else
                 _id = Int32.Parse(PageState.QueryString["id"]);
                 await LoadCarouselById(_id);
             }
-            _Carousels = await ClientCarouselService.GetCarouselsAsync(ModuleState.ModuleId);
+            //_Carousels = await ClientCarouselService.GetCarouselsAsync(ModuleState.ModuleId);
+            var allCarousels = await ClientCarouselService.GetCarouselsAsync(ModuleState.ModuleId);
+            _Carousels = allCarousels.OrderBy(item => item.OrderBy).ToList();
+
+            int maxOrder = (_Carousels != null && _Carousels.Count > 0) ? _Carousels.Max(c => c.OrderBy) : 0;
+            _orderBy = maxOrder + 1;
+
         }
         catch (Exception ex)
         {
@@ -185,6 +211,7 @@ else
             _imageUrl = carousel.ImageUrl;
             _description = carousel.Description;
             _isActive = carousel.IsActive;
+            _orderBy = carousel.OrderBy;
             _createdby = carousel.CreatedBy;
             _createdon = carousel.CreatedOn;
             _modifiedby = carousel.ModifiedBy;
@@ -205,6 +232,7 @@ else
         _imageUrl = string.Empty;
         _description = string.Empty;
         _isActive = true;
+        _orderBy = 1;
         _createdby = string.Empty;
         _createdon = DateTime.MinValue;
         _modifiedby = string.Empty;
@@ -245,6 +273,13 @@ else
                     carousel.ImageUrl = _imageUrl;
                     carousel.Description = _description;
                     carousel.IsActive = _isActive;
+                    carousel.OrderBy = _orderBy;
+                    // var allCarousels = await ClientCarouselService.GetCarouselsAsync(ModuleState.ModuleId);
+                    // int maxOrder = (allCarousels != null && allCarousels.Count > 0) ? allCarousels.Max(c => c.OrderBy) : 0;
+                    // carousel.OrderBy = maxOrder + 1;
+                    
+                   // await logger.LogInformation("New Carousel - AllCount: {Count}, MaxOrder: {MaxOrder}, AssignedOrderBy: {OrderBy}", allCarousels?.Count ?? 0, maxOrder, carousel.OrderBy);
+                    
                     carousel = await ClientCarouselService.AddCarouselAsync(carousel);
                     await logger.LogInformation("Carousel Added {Carousel}", carousel);
                 }
@@ -255,11 +290,16 @@ else
                     carousel.ImageUrl = _imageUrl;
                     carousel.Description = _description;
                     carousel.IsActive = _isActive;
+                    carousel.OrderBy = _orderBy;
                     await ClientCarouselService.UpdateCarouselAsync(carousel);
                     await logger.LogInformation("Carousel Updated {Carousel}", carousel);
                 }
                 Reset();
                 _Carousels = await ClientCarouselService.GetCarouselsAsync(ModuleState.ModuleId);
+
+                int maxOrder = (_Carousels != null && _Carousels.Count > 0) ? _Carousels.Max(c => c.OrderBy) : 0;
+                _orderBy = maxOrder + 1;
+
                 StateHasChanged();
             }
             else
@@ -282,6 +322,13 @@ else
             if (uploadedFile != null)
             {
                 _imageUrl = uploadedFile.Url;
+
+                if (string.IsNullOrWhiteSpace(_title))
+                {
+                    var title = Path.GetFileNameWithoutExtension(_imageUrl);
+                    title = System.Text.RegularExpressions.Regex.Replace(title, @"^[0-9]+_", "").Trim();
+                    _title = title.Replace("_", " ");
+                }
 
                 // // Check if the image exceeds the maximum dimensions from settings
                 // if (uploadedFile.ImageWidth > _imageMaxWidth || uploadedFile.ImageHeight > _imageMaxHeight)
@@ -316,6 +363,8 @@ else
                 _imageUrl = null;
             }
             StateHasChanged();
+            await Save();
+            StateHasChanged();
         }
     }
 
@@ -328,4 +377,63 @@ else
             StateHasChanged();
         }
     }
+
+    private async Task MoveUp(Carousel carousel)
+    {
+        try
+        {
+            var previousItem = _Carousels
+                .Where(c => c.OrderBy < carousel.OrderBy)
+                .OrderByDescending(c => c.OrderBy)
+                .FirstOrDefault();
+
+            if (previousItem != null)
+            {
+                int tempOrder = carousel.OrderBy;
+                carousel.OrderBy = previousItem.OrderBy;
+                previousItem.OrderBy = tempOrder;
+
+                await ClientCarouselService.UpdateCarouselAsync(carousel);
+                await ClientCarouselService.UpdateCarouselAsync(previousItem);
+                
+                _Carousels = await ClientCarouselService.GetCarouselsAsync(ModuleState.ModuleId);
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            await logger.LogError(ex, "Error Moving Carousel Up {Error}", ex.Message);
+            AddModuleMessage(Localizer["Message.SaveError"], MessageType.Error);
+        }
+    }
+
+    private async Task MoveDown(Carousel carousel)
+    {
+        try
+        {
+            var nextItem = _Carousels
+                .Where(c => c.OrderBy > carousel.OrderBy)
+                .OrderBy(c => c.OrderBy)
+                .FirstOrDefault();
+
+            if (nextItem != null)
+            {
+                int tempOrder = carousel.OrderBy;
+                carousel.OrderBy = nextItem.OrderBy;
+                nextItem.OrderBy = tempOrder;
+
+                await ClientCarouselService.UpdateCarouselAsync(carousel);
+                await ClientCarouselService.UpdateCarouselAsync(nextItem);
+                
+                _Carousels = await ClientCarouselService.GetCarouselsAsync(ModuleState.ModuleId);
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            await logger.LogError(ex, "Error Moving Carousel Down {Error}", ex.Message);
+            AddModuleMessage(Localizer["Message.SaveError"], MessageType.Error);
+        }
+    }
 }
+
