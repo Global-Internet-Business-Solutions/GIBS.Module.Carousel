@@ -17,7 +17,7 @@ namespace GIBS.Module.Carousel.Services
         public async Task<List<Models.Carousel>> GetCarouselsAsync(int ModuleId)
         {
             List<Models.Carousel> Carousels = await GetJsonAsync<List<Models.Carousel>>(CreateAuthorizationPolicyUrl($"{Apiurl}?moduleid={ModuleId}", EntityNames.Module, ModuleId), Enumerable.Empty<Models.Carousel>().ToList());
-            return Carousels.OrderBy(item => item.Title).ToList();
+            return Carousels.OrderByDescending(item => item.OrderBy).ToList();
         }
 
         public async Task<Models.Carousel> GetCarouselAsync(int CarouselId, int ModuleId)

@@ -1,0 +1,196 @@
+﻿@using Oqtane.Modules.Controls
+@using GIBS.Module.Carousel.Services
+@using GIBS.Module.Carousel.Models
+@using System.IO
+
+@namespace GIBS.Module.Carousel
+@inherits ModuleBase
+@inject ICarouselService ClientCarouselService
+@inject IStringLocalizer<MobileUpload> Localizer
+@inject IFileService FileService
+@inject ISettingService SettingService
+
+<h4>@Localizer["AddPhoto"]</h4>
+
+<form @ref="form" class="@(validated ? "was-validated" : "needs-validation")" novalidate>
+    <div class="container">
+        <div class="row mb-1 align-items-center">
+            <Label Class="col-sm-3" For="title" HelpText="Enter a title" ResourceKey="Title">Title: </Label>
+            <div class="col-sm-9">
+                <input id="title" class="form-control" @bind="_title" required />
+            </div>
+        </div>
+        <div class="row mb-1 align-items-center">
+            <Label Class="col-sm-3" For="description" HelpText="Enter a description" ResourceKey="Description">Description: </Label>
+            <div class="col-sm-9">
+                <textarea id="description" class="form-control" @bind="_description"></textarea>
+            </div>
+        </div>
+        <div class="row mb-1 align-items-center">
+            <Label Class="col-sm-3" For="upload" HelpText="Upload the file you want" ResourceKey="Label.UploadImage">Image: </Label>
+            <div class="col-sm-9">
+                <FileManager UploadMultiple="false" Filter="jpg,png,gif,jpeg"
+                             FolderId="@_folderId"
+                             ShowSuccess="true" ShowFolders="false" ShowFiles="false" ShowImage="false"
+                             OnUpload="@HandleFileUpload" />
+            </div>
+        </div>
+
+        <div class="row mb-1 align-items-center">
+            <Label Class="col-sm-3" For="imageURL" HelpText="Upload or enter an image URL." ResourceKey="Label.ImageURL">@Localizer["ImageURL"]: </Label>
+            <div class="col-sm-9">
+                <input id="imageURL" class="form-control mb-1" @bind="_imageUrl" placeholder="Paste or enter image URL" />
+
+                @if (!string.IsNullOrEmpty(_imageUrl))
+                {
+                    <img src="@_imageUrl" alt="Image preview" style="max-width: 280px; max-height: 200px; margin-top: 5px; margin-bottom: 10px;" />
+                }
+            </div>
+        </div>
+
+    </div>
+    
+    <NavLink class="btn btn-secondary ms-1" href="@NavigateUrl()">@Localizer["Done"]</NavLink>
+</form>
+
+@code {
+    public override SecurityAccessLevel SecurityAccessLevel => SecurityAccessLevel.Edit;
+    public override bool UseAdminContainer => false;
+    public override string Actions => "Add";
+
+    public override string Title => "Mobile Upload Carousel Photos";
+
+    private ElementReference form;
+    private bool validated = false;
+
+    private string _title;
+    private string _imageUrl = string.Empty;
+    private string _description;
+    private bool _isActive = true;
+    private int _orderBy;
+    private int _folderId = 1;
+
+    private List<Carousel> _Carousels;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            if (int.TryParse(SettingService.GetSetting(ModuleState.Settings, "ImageFolder", "1"), out int folderId))
+            {
+                _folderId = folderId;
+            }
+
+            await LoadCarousels();
+            SetNextOrderBy();
+        }
+        catch (Exception ex)
+        {
+            await logger.LogError(ex, "Error Loading Mobile Upload {Error}", ex.Message);
+            AddModuleMessage(Localizer["Message.LoadError"], MessageType.Error);
+        }
+    }
+
+    private async Task LoadCarousels()
+    {
+        var allCarousels = await ClientCarouselService.GetCarouselsAsync(ModuleState.ModuleId);
+        _Carousels = allCarousels.OrderBy(item => item.OrderBy).ToList();
+    }
+
+    private void SetNextOrderBy()
+    {
+        int maxOrder = (_Carousels != null && _Carousels.Count > 0) ? _Carousels.Max(c => c.OrderBy) : 0;
+        _orderBy = maxOrder + 1;
+    }
+
+    private void Reset()
+    {
+        _title = string.Empty;
+        _imageUrl = string.Empty;
+        _description = string.Empty;
+        _isActive = true;
+        validated = false;
+        SetNextOrderBy();
+    }
+
+    private async Task Save()
+    {
+        try
+        {
+            validated = true;
+            var interop = new Oqtane.UI.Interop(JSRuntime);
+            if (await interop.FormValid(form))
+            {
+                Carousel carousel = new Carousel();
+                carousel.ModuleId = ModuleState.ModuleId;
+                carousel.Title = _title;
+                carousel.ImageUrl = _imageUrl;
+                carousel.Description = _description;
+                carousel.IsActive = _isActive;
+                carousel.OrderBy = _orderBy;
+
+                carousel = await ClientCarouselService.AddCarouselAsync(carousel);
+                await logger.LogInformation("Carousel Added {Carousel}", carousel);
+
+                await LoadCarousels();
+                SetNextOrderBy();
+                Reset();
+                StateHasChanged();
+            }
+            else
+            {
+                AddModuleMessage(Localizer["Message.SaveValidation"], MessageType.Warning);
+            }
+        }
+        catch (Exception ex)
+        {
+            await logger.LogError(ex, "Error Saving Carousel {Error}", ex.Message);
+            AddModuleMessage(Localizer["Message.SaveError"], MessageType.Error);
+        }
+    }
+
+    private async void HandleFileUpload(int fileId)
+    {
+        if (_imageUrl != null)
+        {
+            var uploadedFile = await FileService.GetFileAsync(fileId);
+            if (uploadedFile != null)
+            {
+                var extension = Path.GetExtension(uploadedFile.Name)?.TrimStart();
+                if (string.IsNullOrWhiteSpace(extension))
+                {
+                    extension = uploadedFile.Extension;
+                }
+
+                var timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
+                uploadedFile.Name = $"image-{timestamp}.{extension?.ToLowerInvariant()}";
+                uploadedFile = await FileService.UpdateFileAsync(uploadedFile);
+
+                _imageUrl = uploadedFile.Url;
+
+                if (string.IsNullOrWhiteSpace(_title))
+                {
+                    _title = Path.GetFileNameWithoutExtension(uploadedFile.Name);
+                }
+            }
+            else
+            {
+                _imageUrl = null;
+            }
+
+            StateHasChanged();
+            await Save();
+            StateHasChanged();
+        }
+    }
+
+    // private async void HandleFileSelect(int fileId)
+    // {
+    //     var selectedFile = await FileService.GetFileAsync(fileId);
+    //     if (selectedFile != null)
+    //     {
+    //         _imageUrl = selectedFile.Url;
+    //         StateHasChanged();
+    //     }
+    // }
+}

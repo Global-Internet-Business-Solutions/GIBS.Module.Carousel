@@ -14,15 +14,46 @@
 {
     <p><em>You need to upload some pictures...</em></p>
 }
+else if (_slideshowCarouselId.HasValue)
+{
+    <!-- Slideshow View -->
+    <div class="slideshow-container">
+        <div class="slideshow-header">
+            <a href="@NavigateUrl()" class="btn btn-outline-secondary">Back to Carousel</a>
+            <h3 class="slideshow-title">@_currentSlide?.Title</h3>
+            <span class="slideshow-counter">@(_slideshowIndex + 1) / @_Carousels.Count</span>
+        </div>
+        
+        <div class="slideshow-body text-center">
+            @if (_currentSlide != null)
+            {
+                <img src="@_currentSlide.ImageUrl" class="img-fluid slideshow-image" alt="@_currentSlide.Title" loading="eager" decoding="async" />
+                @if (!string.IsNullOrEmpty(_currentSlide.Description))
+                {
+                    <p class="slideshow-description">@_currentSlide.Description</p>
+                }
+            }
+        </div>
+
+        <div class="slideshow-footer text-center">
+            <a href="@GetSlideshowUrl(_slideshowIndex - 1)" class="btn btn-secondary @(_slideshowIndex == 0 ? "disabled" : "")" role="button">Previous</a>
+            <a href="@GetSlideshowUrl(_slideshowIndex + 1)" class="btn btn-secondary @(_slideshowIndex == _Carousels.Count - 1 ? "disabled" : "")" role="button">Next</a>
+        </div>
+    </div>
+}
 else if (_Carousels.Count > 0)
 {
     <div id="gibsCarousel" class="carousel slide" data-bs-ride="carousel" data-min-per-slide="@_numberPerSlide">
         <div class="carousel-inner" role="listbox">
             @for (int i = 0; i < _Carousels.Count; i++)
             {
+                var loadingMode = i < 6 ? "eager" : "lazy";
                 <div class="carousel-item @(i == 0 ? "active" : "")">
                     <div class="col-6">
-                        <img src="@_Carousels[i].ImageUrl" class="img-fluid" alt="@_Carousels[i].Title" style="height:@(_imageHeight)" loading="eager" decoding="async" />
+                        <a href="@NavigateUrl()/?cid=@_Carousels[i].CarouselId" class="carousel-image-link">
+                            <img src="@_Carousels[i].ImageUrl" class="img-fluid carousel-image" alt="@_Carousels[i].Title" style="height:@(_imageHeight)" 
+                            loading="@loadingMode" decoding="async" />
+                        </a>
                     </div>
                 </div>
             }
@@ -40,7 +71,8 @@ else
     <p>@Localizer["Message.DisplayNone"]</p>
 }
 
-<div class="text-end">
+<div class="text-end mt-1">
+    <ActionLink Action="MobileUpload" Security="SecurityAccessLevel.Edit" Text="Add Photo" IconName="pencil" IconOnly ResourceKey="MobileUpload" />
     <ActionLink Action="Add" Security="SecurityAccessLevel.Edit" Text="Manage Carousel" ResourceKey="ManageCarousel" />
 </div>
 
@@ -49,28 +81,62 @@ else
 
     public override List<Resource> Resources => new List<Resource>()
     {
-        new Stylesheet("_content/GIBS.Module.Carousel/Module.css?v=9"),
+        new Stylesheet("_content/GIBS.Module.Carousel/Module.css?v=10"),
         new Script("_content/GIBS.Module.Carousel/Module.js?v=9")
     };
 
     List<Carousel> _Carousels;
     private string _numberPerSlide;
     private string _imageHeight;
+    private int? _slideshowCarouselId;
+    private int _slideshowIndex;
+    private Carousel _currentSlide;
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
             _numberPerSlide = SettingService.GetSetting(ModuleState.Settings, "NumberVisible", "5");
-            _imageHeight = SettingService.GetSetting(ModuleState.Settings, "ImageHeight", "300");
+            _imageHeight = SettingService.GetSetting(ModuleState.Settings, "ImageHeight", "300px");
 
             var allCarousels = await ClientCarouselService.GetCarouselsAsync(ModuleState.ModuleId);
-            _Carousels = allCarousels.Where(c => c.IsActive).OrderBy(item => item.OrderBy).ToList();
+            _Carousels = allCarousels.Where(c => c.IsActive).ToList();
+
+            // Check querystring for cid (carousel id) parameter
+            if (PageState.QueryString.ContainsKey("cid"))
+            {
+                if (int.TryParse(PageState.QueryString["cid"], out int carouselId))
+                {
+                    var carousel = _Carousels.FirstOrDefault(c => c.CarouselId == carouselId);
+                    if (carousel != null)
+                    {
+                        SetPageTitle(carousel.Title);
+                        _slideshowIndex = _Carousels.IndexOf(carousel);
+                        ShowSlideshowInternal(carouselId);
+                    }
+                }
+            }
         }
         catch (Exception ex)
         {
             await logger.LogError(ex, "Error Loading Carousel {Error}", ex.Message);
             AddModuleMessage(Localizer["Message.LoadError"], MessageType.Error);
         }
+    }
+
+    private void ShowSlideshowInternal(int carouselId)
+    {
+        _slideshowCarouselId = carouselId;
+        _currentSlide = _Carousels.FirstOrDefault(c => c.CarouselId == carouselId);
+        StateHasChanged();
+    }
+
+    private string GetSlideshowUrl(int index)
+    {
+        if (index >= 0 && index < _Carousels.Count)
+        {
+            return $"{NavigateUrl()}/?cid={_Carousels[index].CarouselId}";
+        }
+        return "#";
     }
 }

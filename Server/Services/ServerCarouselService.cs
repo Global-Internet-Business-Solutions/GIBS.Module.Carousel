@@ -32,7 +32,7 @@ namespace GIBS.Module.Carousel.Services
         {
             if (_userPermissions.IsAuthorized(_accessor.HttpContext.User, _alias.SiteId, EntityNames.Module, ModuleId, PermissionNames.View))
             {
-                return Task.FromResult(_CarouselRepository.GetCarousels(ModuleId).ToList());
+                return Task.FromResult(_CarouselRepository.GetCarousels(ModuleId).OrderByDescending(item => item.OrderBy).ToList());
             }
             else
             {

@@ -1,5 +1,6 @@
 @using Microsoft.AspNetCore.Components.Forms
 @using Oqtane.Modules.Controls
+@using Oqtane.Services
 @using GIBS.Module.Carousel.Services
 @using GIBS.Module.Carousel.Models
 @using System.IO
@@ -33,7 +34,7 @@
         </div>
 
         <div class="row mb-1 align-items-center">
-            <Label Class="col-sm-3" For="imageURL" HelpText="Upload or enter an image URL." ResourceKey="Label.ImageURL">@Localizer["Label.ImageURL"]</Label>
+            <Label Class="col-sm-3" For="imageURL" HelpText="Upload or enter an image URL." ResourceKey="Label.ImageURL">@Localizer["Label.ImageURL"]: </Label>
             <div class="col-sm-9">
                 <input id="imageURL" class="form-control mb-1" @bind="@_imageUrl" placeholder="Paste or enter image URL" />
 
@@ -83,17 +84,17 @@
 }
 else if (_Carousels.Count != 0)
 {
-    <Pager Items="@_Carousels.OrderBy(c => c.OrderBy).ToList()">
+    <Pager Items="@_Carousels">
         <Header>
             <th style="width: 1px;">&nbsp;</th>
             <th style="width: 1px;">&nbsp;</th>
             <th>@Localizer["Title"]</th>
-            <th>@Localizer["Description"]</th>
-            <th>@Localizer["ImageUrl"]</th>
-            <th>@Localizer["Image"]</th>
-            <th class="texcenter">@Localizer["OrderBy"]</th>
+          
+            <th class="text-center">@Localizer["Image"]</th>
+            
             <th style="width: 1px;">&nbsp;</th>
             <th style="width: 1px;">&nbsp;</th>
+            <th class="text-center">@Localizer["OrderBy"]</th>
             <th>@Localizer["IsActive"]</th>
         </Header>
         <Row>
@@ -104,17 +105,17 @@ else if (_Carousels.Count != 0)
                 <ActionDialog Header="Delete Carousel" Message="Are You Sure You Wish To Delete This Carousel?" Action="Delete" Security="SecurityAccessLevel.Edit" Class="btn btn-danger" OnClick="@(async () => await Delete(context))" ResourceKey="Delete" Id="@context.CarouselId.ToString()" />
             </td>
             <td>@context.Title</td>
-            <td>@context.Description</td>
-            <td>@context.ImageUrl</td>
-            <td><img src="@context.ImageUrl" alt="Image preview" style="max-width: 220px; max-height: 180px;" /></td>
-            <td>@context.OrderBy</td>
+           
+            <td class="text-center"><img src="@context.ImageUrl" alt="Image preview" style="max-width: 220px; max-height: 180px;" /></td>
+            
             <td>
                 <button type="button" class="btn btn-outline-primary" title="Move Up" @onclick="@(async () => await MoveUp(context))" disabled="@(context.OrderBy == _Carousels.Min(c => c.OrderBy))"><i class="oi oi-arrow-circle-top"></i></button>
             </td>
             <td>
                 <button type="button" class="btn btn-outline-primary" title="Move Down" @onclick="@(async () => await MoveDown(context))" disabled="@(context.OrderBy == _Carousels.Max(c => c.OrderBy))"><i class="oi oi-arrow-circle-bottom"></i></button>
             </td>
-            <td>@context.IsActive</td>
+            <td class="text-center">@context.OrderBy</td>
+            <td class="text-center">@context.IsActive</td>
         </Row>
     </Pager>
 }
@@ -125,7 +126,7 @@ else
 
 @code {
     public override SecurityAccessLevel SecurityAccessLevel => SecurityAccessLevel.Edit;
-
+    public override bool UseAdminContainer => false;
     public override string Actions => "Add,Edit";
 
     public override string Title => "Manage Carousel Photos";
@@ -188,7 +189,8 @@ else
             }
             //_Carousels = await ClientCarouselService.GetCarouselsAsync(ModuleState.ModuleId);
             var allCarousels = await ClientCarouselService.GetCarouselsAsync(ModuleState.ModuleId);
-            _Carousels = allCarousels.OrderBy(item => item.OrderBy).ToList();
+            _Carousels = allCarousels;
+            StateHasChanged();
 
             int maxOrder = (_Carousels != null && _Carousels.Count > 0) ? _Carousels.Max(c => c.OrderBy) : 0;
             _orderBy = maxOrder + 1;
@@ -396,7 +398,8 @@ else
                 await ClientCarouselService.UpdateCarouselAsync(carousel);
                 await ClientCarouselService.UpdateCarouselAsync(previousItem);
                 
-                _Carousels = await ClientCarouselService.GetCarouselsAsync(ModuleState.ModuleId);
+                var allCarousels = await ClientCarouselService.GetCarouselsAsync(ModuleState.ModuleId);
+                _Carousels = allCarousels;
                 StateHasChanged();
             }
         }
@@ -425,7 +428,8 @@ else
                 await ClientCarouselService.UpdateCarouselAsync(carousel);
                 await ClientCarouselService.UpdateCarouselAsync(nextItem);
                 
-                _Carousels = await ClientCarouselService.GetCarouselsAsync(ModuleState.ModuleId);
+                var allCarousels = await ClientCarouselService.GetCarouselsAsync(ModuleState.ModuleId);
+                _Carousels = allCarousels;
                 StateHasChanged();
             }
         }
