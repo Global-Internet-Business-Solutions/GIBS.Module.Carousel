@@ -13,15 +13,40 @@ using System.Threading.Tasks;
 
 namespace GIBS.Module.Carousel.Manager
 {
-    public class CarouselManager : MigratableModuleBase, IInstallable, IPortable, ISearchable
+    public class CarouselManager : MigratableModuleBase, IInstallable, IPortable, ISearchable, ISitemap
     {
         private readonly ICarouselRepository _CarouselRepository;
         private readonly IDBContextDependencies _DBContextDependencies;
+       
 
         public CarouselManager(ICarouselRepository CarouselRepository, IDBContextDependencies DBContextDependencies)
         {
             _CarouselRepository = CarouselRepository;
             _DBContextDependencies = DBContextDependencies;
+        }
+
+        public List<Sitemap> GetUrls(string alias, string path, Oqtane.Models.Module module)
+        {
+            var sitemapUrls = new List<Sitemap>();
+            var carousels = _CarouselRepository.GetCarousels(module.ModuleId);
+           // var allCarousels = await ClientCarouselService.GetCarouselsAsync(ModuleState.ModuleId);
+
+
+            // 1. Fetch your custom module data (e.g., from a repository)
+            // 2. Loop through your items and create Sitemap objects
+            // 3. Example of adding a dynamic detail page:
+
+            foreach (var carousel in carousels)
+            {
+
+                sitemapUrls.Add(new Sitemap
+                {
+                    Url = $"{alias}/{path}?cid={carousel.CarouselId}", // Construct the full URL
+                    ModifiedOn = DateTime.UtcNow
+                });
+            }
+
+            return sitemapUrls;
         }
 
         public bool Install(Tenant tenant, string version)

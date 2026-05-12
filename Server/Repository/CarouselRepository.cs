@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using System.Linq;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Oqtane.Modules;
 
 namespace GIBS.Module.Carousel.Repository
@@ -13,6 +14,7 @@ namespace GIBS.Module.Carousel.Repository
         Models.Carousel AddCarousel(Models.Carousel Carousel);
         Models.Carousel UpdateCarousel(Models.Carousel Carousel);
         void DeleteCarousel(int CarouselId);
+        Task<List<Models.Carousel>> GetCarouselsAsync(int moduleId);
     }
 
     public class CarouselRepository : ICarouselRepository, ITransientService
@@ -70,6 +72,12 @@ namespace GIBS.Module.Carousel.Repository
             Models.Carousel Carousel = db.Carousel.Find(CarouselId);
             db.Carousel.Remove(Carousel);
             db.SaveChanges();
+        }
+
+        public Task<List<Models.Carousel>> GetCarouselsAsync(int moduleId)
+        {
+            using var db = _factory.CreateDbContext();
+            return Task.FromResult(db.Carousel.Where(item => item.ModuleId == moduleId).ToList());
         }
     }
 }
